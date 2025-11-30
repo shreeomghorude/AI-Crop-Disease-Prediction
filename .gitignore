@@ -1,0 +1,28 @@
+# Node modules (very heavy)
+frontend/node_modules/
+backend/node_modules/
+
+# Python cache
+__pycache__/
+**/__pycache__/
+
+# Virtual environment
+venv/
+env/
+
+# Build folders
+frontend/build/
+frontend/dist/
+backend/build/
+backend/dist/
+
+# Large model files (optional)
+*.pth
+*.h5
+
+# IDE / editor
+.vscode/
+*.log
+
+# Environment files
+.env
