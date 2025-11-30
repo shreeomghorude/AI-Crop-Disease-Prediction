@@ -24,7 +24,7 @@ Welcome to Agri-Assist Project, an innovative agricultural application designed 
 
 ## Installation
 
-1. Clone the repository: `git clone https://github.com/MohdSaif-1807/agri-assist-project.git`
+1. Clone the repository: `git clone https://github.com/shreeomghorude/AI-Crop-Disease-Prediction`
 2. Navigate to the project directory: `cd agri-assist-project`
 3. Install dependencies: `npm install` (for both frontend and backend)
 4. Navigate to the project directory: `cd agri-assist-project/flask-backend`
