@@ -17,80 +17,78 @@ cloudinary.config({
 });
 
 const storage = new CloudinaryStorage({
-    cloudinary: cloudinary,
+    cloudinary,
     params: {
         folder: "crop-disease",
-        allowed_formats: ["jpg", "jpeg", "png"]
+        allowed_formats: ["jpg"],
+        resource_type: "image",
+        transformation: [],      // ❗ NO TRANSFORMATIONS
+        format: "jpg",           // Only convert, no resize
+        quality: "auto:best"     // Keep original quality
     }
 });
+
 
 const upload = multer({ storage });
 
 // ---------------- Upload + Predict Route ----------------
+// ---------------- Upload + Predict Route ----------------
 router.post(
-    "/upload",
-    requireSignin,
-    upload.single("image"),
-    async (req, res) => {
-        try {
-            if (!req.file) {
-                return res.status(400).json({ message: "No image uploaded" });
-            }
+  "/upload",
+  requireSignin,
+  upload.single("image"),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No image uploaded" });
+      }
 
-            console.log("USER ID:", req.userId);
-            console.log("Uploaded File:", req.file);
+      console.log("USER ID:", req.userId);
+      console.log("Uploaded File:", req.file);
 
-           const imageUrl = req.file.path.replace("/upload/", "/upload/f_jpg/");
-            console.log("Processed Cloudinary URL:", imageUrl);
+      const imageUrl = req.file.path;
+      console.log("Final Cloudinary URL:", imageUrl);
 
+      // 🔥 Send image URL to Flask
+      const flaskResponse = await axios.post(
+        process.env.FLASK_URL,
+        { imageUrl },
+        { headers: { "Content-Type": "application/json" } }
+      );
 
-            // Send image to Flask
-            const flaskResponse = await axios.post(
-                process.env.FLASK_URL,
-                { imageUrl },
-                { headers: { "Content-Type": "application/json" } }
-            );
+      console.log("Flask Response:", flaskResponse.data);
 
-            console.log("Flask Response:", flaskResponse.data);
+      const result = flaskResponse.data;
 
-            const result = flaskResponse.data;
+      // ✅ Save FULL result (optional but recommended)
+      await History.create({
+        userId: req.userId,
+        crop: result.crop,
+        disease: result.disease,
+        cause: result.cause,
+        prevention: result.prevention,
+        treatment: result.treatment,
+        fertilizer: result.fertilizer,
+        dos_and_donts: result.dos_and_donts,
+        imageUrl
+      });
 
-            // ---- FIX START ----
-            const crop = result.Crop;
-            const disease = Array.isArray(result.Disease)
-                ? result.Disease[0]
-                : result.Disease;
-
-            const cause = result.Cause || [];
-            const prevention = result.Prevent_Cure || [];
-            // ---- FIX END ----
-
-            // Save to MongoDB
-            const history = await History.create({
-                userId: req.userId,
-                crop,
-                disease,
-                cause,
-                prevention,
-                imageUrl
-            });
-
-            res.json({
-                message: "Prediction successful",
-                prediction: {
-                    crop,
-                    disease,
-                    cause,
-                    prevention,
-                    imageUrl
-                }
-            });
-        } catch (err) {
-            console.error("FULL ERROR:", err);
-            res.status(500).json({ error: err.message || err });
+      // ✅ SEND FULL FLASK RESPONSE TO FRONTEND
+      res.json({
+        message: "Prediction successful",
+        prediction: {
+          ...result,
+          imageUrl
         }
+      });
+
+    } catch (err) {
+      console.error("FULL ERROR:", err);
+      res.status(500).json({ error: err.message || err });
     }
+  }
 );
+
 
 // ---------------- Fetch User Prediction History ----------------
 router.get("/history", requireSignin, async (req, res) => {

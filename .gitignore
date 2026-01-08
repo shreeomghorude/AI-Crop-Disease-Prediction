@@ -26,3 +26,7 @@ backend/dist/
 
 # Environment files
 .env
+
+# Datasets
+*.zip
+flask-backend/dataset/

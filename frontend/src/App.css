@@ -7,7 +7,7 @@ body {
   animation: 3s slide-right;
 }
 
-a:hover {
+/* a:hover {
   color: aqua;
 }
 
@@ -17,7 +17,7 @@ a:hover {
 
 .nav-item.active {
   background-color: aqua;
-}
+} */
 
 /* @media only screen and (min-width: 992px) {
   body {

@@ -9,42 +9,42 @@ import torch
 from torchvision import transforms
 from PIL import Image
 from utils.disease import disease_dic
-from utils.model import ResNet9
+from utils.model import create_effnet_model
+   # <-- NEW
 
 
 # ---------------------- Disease Model Setup ----------------------
 disease_classes = [
-    "Apple___Apple_scab", "Apple___Black_rot", "Apple___Cedar_apple_rust", "Apple___healthy",
-    "Blueberry___healthy", "Cherry_(including_sour)___Powdery_mildew", "Cherry_(including_sour)___healthy",
-    "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot", "Corn_(maize)___Common_rust_",
-    "Corn_(maize)___Northern_Leaf_Blight", "Corn_(maize)___healthy", "Grape___Black_rot",
-    "Grape___Esca_(Black_Measles)", "Grape___Leaf_blight_(Isariopsis_Leaf_Spot)", "Grape___healthy",
-    "Orange___Haunglongbing_(Citrus_greening)", "Peach___Bacterial_spot", "Peach___healthy",
-    "Pepper,_bell___Bacterial_spot", "Pepper,_bell___healthy", "Potato___Early_blight",
-    "Potato___Late_blight", "Potato___healthy", "Raspberry___healthy", "Soybean___healthy",
-    "Squash___Powdery_mildew", "Strawberry___Leaf_scorch", "Strawberry___healthy",
-    "Tomato___Bacterial_spot", "Tomato___Early_blight", "Tomato___Late_blight",
-    "Tomato___Leaf_Mold", "Tomato___Septoria_leaf_spot",
-    "Tomato___Spider_mites Two-spotted_spider_mite", "Tomato___Target_Spot",
-    "Tomato___Tomato_Yellow_Leaf_Curl_Virus", "Tomato___Tomato_mosaic_virus", "Tomato___healthy"
+    'Apple___Apple_scab', 'Apple___Black_rot', 'Apple___Cedar_apple_rust', 'Apple___healthy',
+    'Blueberry___healthy', 'Cherry_(including_sour)___Powdery_mildew', 'Cherry_(including_sour)___healthy',
+    'Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot', 'Corn_(maize)___Common_rust_',
+    'Corn_(maize)___Northern_Leaf_Blight', 'Corn_(maize)___healthy', 'Grape___Black_rot',
+    'Grape___Esca_(Black_Measles)', 'Grape___Leaf_blight_(Isariopsis_Leaf_Spot)', 'Grape___healthy',
+    'Orange___Haunglongbing_(Citrus_greening)', 'Peach___Bacterial_spot', 'Peach___healthy',
+    'Pepper,_bell___Bacterial_spot', 'Pepper,_bell___healthy', 'Potato___Early_blight',
+    'Potato___Late_blight', 'Potato___healthy', 'Raspberry___healthy', 'Soybean___healthy',
+    'Squash___Powdery_mildew', 'Strawberry___Leaf_scorch', 'Strawberry___healthy',
+    'Tomato___Bacterial_spot', 'Tomato___Early_blight', 'Tomato___Late_blight',
+    'Tomato___Leaf_Mold', 'Tomato___Septoria_leaf_spot',
+    'Tomato___Spider_mites Two-spotted_spider_mite', 'Tomato___Target_Spot',
+    'Tomato___Tomato_Yellow_Leaf_Curl_Virus', 'Tomato___Tomato_mosaic_virus', 'Tomato___healthy'
 ]
 
-# Load Model
-disease_model_path = 'models/plant_disease_model.pth'
-disease_model = ResNet9(3, len(disease_classes))
-disease_model.load_state_dict(torch.load(disease_model_path, map_location=torch.device('cpu')))
+
+# ---------------------- Load EfficientNet Model ----------------------
+disease_model_path = "models/plant_disease_model.pth"
+
+disease_model = create_effnet_model(len(disease_classes))
+disease_model.load_state_dict(torch.load(disease_model_path, map_location="cpu"))
 disease_model.eval()
 
-# ---------------------- FIXED TRANSFORMS (IMPORTANT) ----------------------
+
+
+# ---------------------- FIXED TRANSFORMS ----------------------
 transform = transforms.Compose([
     transforms.Resize((256, 256)),
-    transforms.ToTensor(),
-    transforms.Normalize(
-        mean=[0.485, 0.456, 0.406],
-        std=[0.229, 0.224, 0.225]
-    )
+    transforms.ToTensor()
 ])
-
 
 
 # ---------------------- Weather Fetch ----------------------
@@ -64,17 +64,17 @@ def weather_fetch(city_name):
     return None
 
 
-# ---------------------- Predict Disease (Helper) ----------------------
+# ---------------------- Predict Disease ----------------------
 def predict_image_from_file(file_bytes):
-    # Ensure proper color format
+
     image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
 
     img_t = transform(image)
     img_u = torch.unsqueeze(img_t, 0)
 
     with torch.no_grad():
-        yb = disease_model(img_u)
-        _, preds = torch.max(yb, dim=1)
+        output = disease_model(img_u)
+        _, preds = torch.max(output, dim=1)
 
     predicted_class = disease_classes[preds[0].item()]
     return disease_dic[predicted_class]
@@ -90,14 +90,13 @@ def home():
     return "Flask backend is running!"
 
 
-# ---------------------- DISEASE PREDICTION ROUTE ----------------------
+# ---------------------- DISEASE PREDICTION API ----------------------
 @app.route('/disease-predict', methods=['POST'])
 def disease_predict():
     try:
-        # 1️⃣ FILE UPLOAD CASE
+        # CASE 1: File Upload
         if "file" in request.files:
             file = request.files["file"]
-
             if file.filename == "":
                 return jsonify({"error": "Empty file"}), 400
 
@@ -105,7 +104,7 @@ def disease_predict():
             result = predict_image_from_file(file_bytes)
             return jsonify(result)
 
-        # 2️⃣ CLOUDINARY URL CASE
+        # CASE 2: Cloudinary URL
         data = request.get_json()
 
         if not data or "imageUrl" not in data:
@@ -114,7 +113,6 @@ def disease_predict():
         image_url = data["imageUrl"]
         print("Processing Image URL:", image_url)
 
-        # Download image from Cloudinary
         response = requests.get(image_url)
         if response.status_code != 200:
             return jsonify({"error": "Failed to download image"}), 400
@@ -127,37 +125,6 @@ def disease_predict():
     except Exception as e:
         print("Error in disease prediction:", str(e))
         return jsonify({"error": "Prediction failed"}), 500
-
-
-# ---------------------- CROP PREDICTION ROUTE ----------------------
-@app.route('/crop-predict', methods=['POST'])
-def crop_predict():
-    try:
-        model_path = 'models/RandomForest.pkl'
-        crop_model = pickle.load(open(model_path, 'rb'))
-
-        data = request.json
-        N = data['nitrogen']
-        P = data['phosphorous']
-        K = data['pottasium']
-        ph = data['ph']
-        rainfall = data['rainfall']
-        city = data['city']
-
-        weather = weather_fetch(city)
-        if weather is None:
-            return jsonify({"error": "Weather API error"}), 400
-
-        temperature, humidity = weather
-
-        features = np.array([[N, P, K, temperature, humidity, ph, rainfall]])
-        prediction = crop_model.predict(features)[0]
-
-        return jsonify({"crop": prediction})
-
-    except Exception as e:
-        print("Crop prediction error:", e)
-        return jsonify({"error": "Crop prediction failed"}), 500
 
 
 # ---------------------- RUN APP ----------------------

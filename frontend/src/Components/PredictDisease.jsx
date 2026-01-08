@@ -1,107 +1,156 @@
-import { React, useState, useContext } from 'react';
-import axios from 'axios';
-import { useNavigate } from 'react-router';
-import { Form } from 'react-bootstrap';
-import { Typography, Grid } from '@mui/material';
-import { Button } from 'react-bootstrap';
-import Fade from '@mui/material/Fade';
-import CircularProgress from '@mui/material/CircularProgress';
-import "@fontsource/open-sans";
-import NavbarFinal from './NavbarFinal';
-import AppContext from '../AppContext';
+import { useState, useContext } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router";
+import { Box, Typography, Paper, Button, CircularProgress } from "@mui/material";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import NavbarFinal from "./NavbarFinal";
+import AppContext from "../AppContext";
 
 function PredictDisease() {
-    const [file, setFile] = useState(null);
-    const navigate = useNavigate();
-    const [loading, setLoading] = useState(false);
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState("");
+  const [loading, setLoading] = useState(false);
 
-    const { setTempUrl, setAns } = useContext(AppContext);
+  const navigate = useNavigate();
+  const { setTempUrl, setAns } = useContext(AppContext);
 
-    const handleImage = (e) => {
-        const uploaded = e.target.files[0];
-        if (!uploaded) return;
+  const handleImage = (e) => {
+    const uploaded = e.target.files[0];
+    if (!uploaded) return;
 
-        setFile(uploaded);
-        setTempUrl(URL.createObjectURL(uploaded));
-    };
+    setFile(uploaded);
+    const previewUrl = URL.createObjectURL(uploaded);
+    setPreview(previewUrl);
+    setTempUrl(previewUrl);
+  };
 
-    const handlePredict = async () => {
-        if (!file) {
-            alert("Please upload an image first!");
-            return;
+  const handlePredict = async () => {
+    if (!file) {
+      alert("Please upload a crop leaf image first!");
+      return;
+    }
+
+    const data = new FormData();
+    data.append("image", file);
+
+    setLoading(true);
+
+    try {
+      const response = await axios.post(
+        "http://localhost:5000/api/crop/upload",
+        data,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
         }
+      );
 
-        const data = new FormData();
-        data.append("image", file); // FIXED FIELD NAME ✔
+      setAns(response.data.prediction || response.data);
+      setLoading(false);
+      navigate("/predict-disease-result");
+    } catch (error) {
+      console.error(error);
+      setLoading(false);
+      alert("Prediction failed. Please try again.");
+    }
+  };
 
-        setLoading(true);
+  return (
+    <>
+      <NavbarFinal />
 
-        try {
-            const response = await axios.post(
-                "http://localhost:5000/api/crop/upload", // FIXED ENDPOINT ✔
-                data,
-                {
-                    headers: {
-                        "Content-Type": "multipart/form-data",
-                        Authorization: `Bearer ${localStorage.getItem("token")}` // REQUIRED ✔
-                    }
-                }
-            );
+      <Box
+        sx={{
+          minHeight: "90vh",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "#E9FFE1",
+          px: 2,
+        }}
+      >
+        <Paper
+          elevation={4}
+          sx={{
+            width: "100%",
+            maxWidth: 480,
+            p: 4,
+            borderRadius: 3,
+            textAlign: "center",
+          }}
+        >
+          <Typography
+            variant="h5"
+            sx={{ fontWeight: 700, mb: 2 }}
+          >
+            Crop Disease Prediction
+          </Typography>
 
-            console.log("Prediction Response:", response.data);
+          <Typography
+            sx={{ color: "text.secondary", mb: 3 }}
+          >
+            Upload a clear image of the crop leaf to detect disease
+          </Typography>
 
-            const result = response.data.prediction;
+          {/* Image Preview */}
+          {preview && (
+            <Box
+              component="img"
+              src={preview}
+              alt="Preview"
+              sx={{
+                width: "100%",
+                height: 220,
+                objectFit: "cover",
+                borderRadius: 2,
+                mb: 2,
+                border: "1px solid #ddd",
+              }}
+            />
+          )}
 
-            // Save result to context
-            setAns({
-                Crop: result.crop,
-                Disease: result.disease,
-                Cause_of_disease: Array.isArray(result.cause) ? result.cause : [result.cause],
-                How_to_prevent_OR_cure_the_disease: Array.isArray(result.prevention) ? result.prevention : [result.prevention]
-            });
+          {/* Upload Button */}
+          <Button
+            variant="outlined"
+            component="label"
+            startIcon={<CloudUploadIcon />}
+            sx={{ mb: 2 }}
+            fullWidth
+          >
+            Choose Leaf Image
+            <input
+              type="file"
+              hidden
+              accept="image/*"
+              onChange={handleImage}
+            />
+          </Button>
 
-            setLoading(false);
-            navigate("/predict-disease-result");
+          {/* Predict Button */}
+          <Button
+            variant="contained"
+            fullWidth
+            sx={{
+              backgroundColor: "#2E7D32",
+              "&:hover": { backgroundColor: "#1B5E20" },
+              py: 1.2,
+            }}
+            onClick={handlePredict}
+            disabled={loading}
+          >
+            {loading ? "Predicting..." : "Predict Disease"}
+          </Button>
 
-        } catch (err) {
-            console.log("Prediction Error:", err);
-            setLoading(false);
-            alert("Prediction failed - check backend!");
-        }
-    };
-
-    return (
-        <>
-            <NavbarFinal />
-
-            <Grid 
-                container 
-                item 
-                md={12} 
-                xs={12}
-                alignItems="center" 
-                justifyContent="center"
-                sx={{ display: "grid", minHeight: "50vh" }}
-            >
-
-                <Typography sx={{ marginBottom: "20px", fontWeight: 'bold' }}>
-                    Upload Crop Leaf Image
-                </Typography>
-
-                <Form.Group style={{ paddingBottom: "20px" }}>
-                    <Form.Control type='file' accept="image/*" onChange={handleImage} />
-                </Form.Group>
-
-                <Button variant='primary' onClick={handlePredict}>
-                    Predict
-                </Button>
-
-                <Fade in={loading} unmountOnExit>
-                    <CircularProgress sx={{ marginTop: '20px' }} />
-                </Fade>
-            </Grid>
-        </>
-    );
+          {/* Loader */}
+          {loading && (
+            <CircularProgress sx={{ mt: 3 }} />
+          )}
+        </Paper>
+      </Box>
+    </>
+  );
 }
 
 export default PredictDisease;

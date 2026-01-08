@@ -1,0 +1,72 @@
+/* Remove bootstrap focus outline */
+.custom-navbar a,
+.custom-navbar button {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Base button style */
+.nav-pill {
+  padding: 8px 18px;
+  border-radius: 50px;
+  font-weight: 600;
+  margin: 0 8px;
+  border: 2px solid #198754;
+  background-color: white !important;
+  color: #198754 !important;
+  text-decoration: none;
+  transition: 0.2s;
+}
+
+/* Active page button */
+.active-pill {
+  background-color: #198754 !important;
+  color: white !important;
+}
+
+/* DO NOT CHANGE BACKGROUND ON HOVER */
+.nav-pill:hover {
+  background-color: white !important;
+  color: #198754 !important;
+}
+
+/* Active button keeps its green on hover */
+.active-pill:hover {
+  background-color: #198754 !important;
+  color: white !important;
+}
+
+/* Remove click/focus background */
+.nav-pill:active,
+.nav-pill:focus {
+  background-color: white !important;
+  color: #198754 !important;
+  box-shadow: none !important;
+}
+
+/* 🚨 FINAL FIX: Override Bootstrap .nav-link:hover */
+.navbar-nav .nav-link:hover {
+  background-color: transparent !important;
+  color: #198754 !important;
+}
+/* Override Bootstrap nav-link completely */
+.navbar-nav .nav-link {
+  background-color: white !important;
+  color: #198754 !important;
+}
+
+/* Disable hover background */
+.navbar-nav .nav-link:hover {
+  background-color: white !important;
+  color: #198754 !important;
+}
+
+/* Active state */
+.navbar-nav .nav-link.active-pill,
+.navbar-nav .active-pill.nav-link {
+  background-color: #198754 !important;
+  color: white !important;
+}
+/* Smooth professional hover */
+
+

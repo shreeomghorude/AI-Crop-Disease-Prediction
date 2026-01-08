@@ -23,7 +23,7 @@ disease_classes = [
 ]
 
 transform = transforms.Compose([
-    transforms.Resize(256),
+    transforms.Resize((256, 256)),
     transforms.ToTensor(),
 ])
 
@@ -34,13 +34,11 @@ model.eval()
 # ---------------- Test Image Path ----------------
 image_path = "./dataset/PlantVillage/Tomato___Early_blight/0a2726e0-3358-4a46-b6dc-563a5a9f2bdf___RS_Erly.B 7860.JPG"
 
-
-
 # ---------------- Prediction Logic ----------------
 with open(image_path, "rb") as f:
     img_bytes = f.read()
 
-image = Image.open(io.BytesIO(img_bytes))
+image = Image.open(io.BytesIO(img_bytes)).convert("RGB")
 img_t = transform(image)
 img_u = torch.unsqueeze(img_t, 0)
 
@@ -49,10 +47,11 @@ with torch.no_grad():
     _, preds = torch.max(yb, dim=1)
 
 predicted_label = disease_classes[preds[0].item()]
+info = disease_dic[predicted_label]
 
 # ---------------- Final Output ----------------
-print("Predicted Label:", predicted_label)
-print("Crop:", disease_dic[predicted_label]["crop"])
-print("Disease:", disease_dic[predicted_label]["disease"])
-print("Cause:", disease_dic[predicted_label]["cause"])
-print("Prevention:", disease_dic[predicted_label]["prevention"])
+print("\nPrediction Result:")
+print("Crop:", info.get("Crop", ""))
+print("Disease:", info.get("Disease", ""))
+print("Cause:", info.get("Cause", []))
+print("Prevention:", info.get("Prevent_Cure", []))
